@@ -1,13 +1,14 @@
 from pydantic import BaseModel, EmailStr, Field
 from datetime import date, time, datetime
 from typing import Optional, List
+from uuid import UUID
 
 class TableBase(BaseModel):
     table_name: str
     capacity: int
 
 class TableResponse(TableBase):
-    id: str
+    id: UUID
     is_active: bool
 
     class Config:
@@ -25,13 +26,13 @@ class BookingCreate(BaseModel):
     guest_count: int = Field(gt=0, description="Guest count must be greater than 0")
 
 class BookingResponse(BaseModel):
-    id: str
+    id: UUID
     booking_date: date
     booking_time: time
     guest_count: int
     status: str
-    table_id: str
-    user_id: str
+    table_id: UUID
+    user_id: UUID
     created_at: datetime
 
     class Config:
