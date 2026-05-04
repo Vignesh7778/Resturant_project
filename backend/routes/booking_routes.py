@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from datetime import date, time
 from db.database import get_db
-from schemas.schemas import BookingCreate, BookingResponse, BookingDetailResponse, TableResponse
+from schemas.schemas import BookingCreate, BookingResponse, BookingDetailResponse, TableResponse, BookingConfirmationResponse
 from services.booking_service import BookingService
 
 router = APIRouter()
@@ -17,7 +17,7 @@ def check_availability(
 ):
     return BookingService.check_availability(db, booking_date, booking_time, guest_count)
 
-@router.post("/bookings", response_model=BookingResponse)
+@router.post("/bookings", response_model=BookingConfirmationResponse)
 def create_booking(booking: BookingCreate, db: Session = Depends(get_db)):
     return BookingService.create_booking(db, booking)
 

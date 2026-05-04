@@ -24,6 +24,13 @@ class BookingCreate(BaseModel):
     booking_date: date
     booking_time: time
     guest_count: int = Field(gt=0, description="Guest count must be greater than 0")
+    table_id: Optional[UUID] = None
+
+class BookingConfirmationResponse(BaseModel):
+    booking_id: UUID
+    table_name: str
+    guest_count: int
+    message: str
 
 class BookingResponse(BaseModel):
     id: UUID

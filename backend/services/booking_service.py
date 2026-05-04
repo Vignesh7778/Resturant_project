@@ -52,16 +52,38 @@ class BookingService:
             db.add(user)
             db.flush() # Flush to get user.id
 
-        # Check availability
-        available_tables = BookingService.check_availability(
-            db, booking_data.booking_date, booking_data.booking_time, booking_data.guest_count
-        )
+        if booking_data.table_id:
+            # User selected a specific table
+            requested_table = db.query(Table).filter(Table.id == booking_data.table_id).first()
+            if not requested_table:
+                raise HTTPException(status_code=404, detail="Table not found")
+            if requested_table.capacity < booking_data.guest_count:
+                raise HTTPException(status_code=400, detail="Table capacity is less than guest count")
+            if not requested_table.is_active:
+                raise HTTPException(status_code=400, detail="Table is not active")
 
-        if not available_tables:
-            raise HTTPException(status_code=400, detail="No tables available for the selected date, time, and guest count")
+            conflicting_booking = db.query(Booking).filter(
+                Booking.booking_date == booking_data.booking_date,
+                Booking.booking_time == booking_data.booking_time,
+                Booking.table_id == booking_data.table_id,
+                Booking.status == 'confirmed'
+            ).first()
 
-        # Allocate smallest fitting table
-        allocated_table = available_tables[0]
+            if conflicting_booking:
+                raise HTTPException(status_code=400, detail="Already Occupied")
+            
+            allocated_table = requested_table
+        else:
+            # Check availability (fallback to auto-allocate)
+            available_tables = BookingService.check_availability(
+                db, booking_data.booking_date, booking_data.booking_time, booking_data.guest_count
+            )
+
+            if not available_tables:
+                raise HTTPException(status_code=400, detail="No tables available for the selected date, time, and guest count")
+
+            # Allocate smallest fitting table
+            allocated_table = available_tables[0]
 
         # Create booking
         new_booking = Booking(
@@ -78,7 +100,12 @@ class BookingService:
             db.commit()
             db.refresh(new_booking)
             print("DEBUG: Booking committed successfully to database")
-            return new_booking
+            return {
+                "booking_id": new_booking.id,
+                "table_name": allocated_table.table_name,
+                "guest_count": new_booking.guest_count,
+                "message": "Booking Confirmed"
+            }
         except Exception as e:
             db.rollback()
             print(f"DEBUG: Booking insert failed: {e}")

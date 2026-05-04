@@ -11,12 +11,14 @@ function App() {
   });
   const [message, setMessage] = useState({ type: '', text: '' });
   const [availableTables, setAvailableTables] = useState(null);
+  const [selectedTableId, setSelectedTableId] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setAvailableTables(null);
+    setSelectedTableId(null);
     setMessage({ type: '', text: '' });
   };
 
@@ -32,6 +34,7 @@ function App() {
     }
     setLoading(true);
     setMessage({ type: '', text: '' });
+    setSelectedTableId(null);
     try {
       const { data } = await axios.get(`${API_BASE_URL}/availability`, {
         params: { booking_date: formData.date, booking_time: formData.time, guest_count: formData.guests },
@@ -56,6 +59,10 @@ function App() {
       setMessage({ type: 'error', text: 'Please check availability first.' });
       return;
     }
+    if (!selectedTableId) {
+      setMessage({ type: 'error', text: 'Please select a table to book.' });
+      return;
+    }
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
@@ -64,13 +71,15 @@ function App() {
         booking_date: formData.date,
         booking_time: formData.time,
         guest_count: parseInt(formData.guests),
+        table_id: selectedTableId,
       });
       setMessage({
         type: 'success',
-        text: `🎉 Reservation confirmed! Booking ID: ${String(data.id).substring(0, 8).toUpperCase()}`,
+        text: `🎉 Confirmed! ID: ${String(data.booking_id).substring(0, 8).toUpperCase()} | Table: ${data.table_name} | Guests: ${data.guest_count}`,
       });
       setFormData({ name: '', email: '', phone: '', date: '', time: '', guests: 1 });
       setAvailableTables(null);
+      setSelectedTableId(null);
     } catch (err) {
       setMessage({ type: 'error', text: err.response?.data?.detail || 'Failed to create booking.' });
     } finally {
@@ -204,7 +213,11 @@ function App() {
                 <p className="availability-title">Available Tables</p>
                 <div className="badge-row">
                   {availableTables.map((t) => (
-                    <span key={t.id} className="badge">
+                    <span 
+                      key={t.id} 
+                      className={`badge ${selectedTableId === t.id ? 'badge--selected' : ''}`}
+                      onClick={() => setSelectedTableId(t.id)}
+                    >
                       🪑 {t.table_name} &bull; {t.capacity} seats
                     </span>
                   ))}
@@ -217,7 +230,7 @@ function App() {
               <button
                 type="submit"
                 className="btn btn--primary"
-                disabled={loading}
+                disabled={loading || !selectedTableId}
               >
                 {loading ? 'Confirming…' : '✅  Confirm Reservation'}
               </button>
