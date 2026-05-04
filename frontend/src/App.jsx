@@ -79,88 +79,162 @@ function App() {
   };
 
   return (
-    <div className="booking-wrapper">
-      {/* Header */}
-      <div className="page-header">
-        <span className="brand-icon">🍽️</span>
-        <h1>Reserve a Table</h1>
-        <p>Restaurant Table Booking Copilot</p>
-        <div className="gold-line" />
-      </div>
+    <div className="page-bg">
+      <div className="page-center">
 
-      {/* Card */}
-      <div className="booking-card">
-        <form onSubmit={handleSubmit}>
-
-          {/* Guest Info */}
-          <div className="section-label">Guest Information</div>
-          <div className="form-group">
-            <label>Full Name</label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="e.g. Vignesh Kumar" />
-          </div>
-          <div className="grid-2">
-            <div className="form-group">
-              <label>Email Address</label>
-              <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="you@example.com" />
-            </div>
-            <div className="form-group">
-              <label>Phone Number</label>
-              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required placeholder="9876543210" />
-            </div>
-          </div>
-
-          {/* Booking Details */}
-          <div className="section-label section-spacer">Reservation Details</div>
-          <div className="grid-2">
-            <div className="form-group">
-              <label>Date</label>
-              <input type="date" name="date" value={formData.date} onChange={handleChange} required />
-            </div>
-            <div className="form-group">
-              <label>Time</label>
-              <input type="time" name="time" value={formData.time} onChange={handleChange} required />
-            </div>
-          </div>
-          <div className="form-group">
-            <label>Number of Guests</label>
-            <input type="number" name="guests" min="1" max="10" value={formData.guests} onChange={handleChange} required />
-          </div>
-
-          {/* Check Availability Button */}
-          <button type="button" className="btn-check" onClick={checkAvailability} disabled={loading}>
-            {loading ? '⏳ Checking...' : '🔍 Check Availability'}
-          </button>
-
-          {/* Available Tables Display */}
-          {availableTables && availableTables.length > 0 && (
-            <div className="availability-result">
-              <p>Available Tables</p>
-              {availableTables.map((t) => (
-                <span key={t.id} className="table-badge">
-                  🪑 {t.table_name} &bull; {t.capacity} seats
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Confirm Button — only show when available */}
-          {availableTables && availableTables.length > 0 && (
-            <button type="submit" className="btn-confirm" disabled={loading}>
-              {loading ? 'Confirming...' : '✅ Confirm Reservation'}
-            </button>
-          )}
-
-          {/* Success / Error Messages */}
-          {message.text && (
-            <div className={`message ${message.type}`}>
-              {message.text}
-            </div>
-          )}
-        </form>
-
-        <div className="footer-note">
-          Powered by FastAPI + Supabase
+        {/* Page Header */}
+        <div className="header">
+          <div className="header-icon">🍽️</div>
+          <h1 className="header-title">Reserve Your Table</h1>
+          <p className="header-sub">Book your perfect dining experience in seconds</p>
         </div>
+
+        {/* Card */}
+        <div className="card">
+          <form onSubmit={handleSubmit} noValidate>
+
+            {/* — Guest Information — */}
+            <div className="section-heading">
+              <span className="section-dot" />
+              Guest Information
+            </div>
+
+            <div className="field">
+              <label className="field-label">Full Name</label>
+              <input
+                className="field-input"
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                placeholder="Jane Doe"
+              />
+            </div>
+
+            <div className="grid-2">
+              <div className="field">
+                <label className="field-label">Email Address</label>
+                <input
+                  className="field-input"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  placeholder="you@example.com"
+                />
+              </div>
+              <div className="field">
+                <label className="field-label">Phone Number</label>
+                <input
+                  className="field-input"
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                  placeholder="(555) 000-0000"
+                />
+              </div>
+            </div>
+
+            {/* — Reservation Details — */}
+            <div className="section-heading section-heading--spaced">
+              <span className="section-dot" />
+              Reservation Details
+            </div>
+
+            <div className="grid-2">
+              <div className="field">
+                <label className="field-label">Date</label>
+                <input
+                  className="field-input"
+                  type="date"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="field">
+                <label className="field-label">Time</label>
+                <input
+                  className="field-input"
+                  type="time"
+                  name="time"
+                  value={formData.time}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="field">
+              <label className="field-label">Number of Guests</label>
+              <input
+                className="field-input"
+                type="number"
+                name="guests"
+                min="1"
+                max="10"
+                value={formData.guests}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            {/* Check Availability */}
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={checkAvailability}
+              disabled={loading}
+            >
+              {loading ? (
+                <><span className="spinner" /> Checking…</>
+              ) : (
+                '🔍  Check Availability'
+              )}
+            </button>
+
+            {/* Available Tables */}
+            {availableTables && availableTables.length > 0 && (
+              <div className="availability-box">
+                <p className="availability-title">Available Tables</p>
+                <div className="badge-row">
+                  {availableTables.map((t) => (
+                    <span key={t.id} className="badge">
+                      🪑 {t.table_name} &bull; {t.capacity} seats
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Confirm Reservation */}
+            {availableTables && availableTables.length > 0 && (
+              <button
+                type="submit"
+                className="btn btn--primary"
+                disabled={loading}
+              >
+                {loading ? 'Confirming…' : '✅  Confirm Reservation'}
+              </button>
+            )}
+
+            {/* Feedback Message */}
+            {message.text && (
+              <div className={`feedback feedback--${message.type}`}>
+                {message.text}
+              </div>
+            )}
+
+          </form>
+        </div>
+
+        {/* Footer */}
+        <p className="footer-note">Powered by FastAPI + Supabase</p>
       </div>
     </div>
   );
