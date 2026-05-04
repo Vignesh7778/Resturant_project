@@ -72,11 +72,17 @@ class BookingService:
             guest_count=booking_data.guest_count
         )
         
-        db.add(new_booking)
-        db.commit()
-        db.refresh(new_booking)
-
-        return new_booking
+        print(f"DEBUG: Booking insert started for user {user.email}")
+        try:
+            db.add(new_booking)
+            db.commit()
+            db.refresh(new_booking)
+            print("DEBUG: Booking committed successfully to database")
+            return new_booking
+        except Exception as e:
+            db.rollback()
+            print(f"DEBUG: Booking insert failed: {e}")
+            raise HTTPException(status_code=500, detail="Failed to save booking to database")
 
     @staticmethod
     def get_all_bookings(db: Session):
