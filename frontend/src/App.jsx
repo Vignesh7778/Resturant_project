@@ -143,7 +143,7 @@ function App() {
                   value={formData.phone}
                   onChange={handleChange}
                   required
-                  placeholder="(555) 000-0000"
+                  placeholder="+91 9876543210"
                 />
               </div>
             </div>
