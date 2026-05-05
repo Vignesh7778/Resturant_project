@@ -9,7 +9,7 @@ class BookingService:
     def check_availability(db: Session, booking_date: date, booking_time: time, guest_count: int):
         # 1. Find tables that can accommodate the guests and are active
         capable_tables = db.query(Table).filter(
-            Table.capacity >= guest_count,
+            Table.capacity == guest_count,
             Table.is_active == True
         ).all()
         
