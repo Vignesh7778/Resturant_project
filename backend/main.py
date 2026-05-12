@@ -1,13 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from routes import booking_routes
 from db.database import test_connection, Base, engine, SessionLocal
-from models.models import Table  # noqa: F401 — needed for Base.metadata
+from models.models import Table, Waitlist  # noqa: F401 — needed for Base.metadata
 
 app = FastAPI(
     title="Restaurant Table Booking Copilot",
-    description="Week 1 — Booking, Availability & Conflict Prevention",
-    version="1.0.0"
+    description="Week 2 — Booking Updates, Cancellation, Waitlist, Smart Suggestions & Admin View",
+    version="2.0.0"
 )
 
 # Enable CORS for React frontend
@@ -31,8 +32,23 @@ def on_startup():
     """
     test_connection()
 
-    # Create schema (idempotent)
+    # Create schema (idempotent — creates new tables, skips existing)
     Base.metadata.create_all(bind=engine)
+
+    # ── Week 2 Migration: add updated_at to bookings if missing ──
+    with engine.connect() as conn:
+        result = conn.execute(text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'bookings' AND column_name = 'updated_at'"
+        ))
+        if result.fetchone() is None:
+            conn.execute(text(
+                "ALTER TABLE bookings ADD COLUMN updated_at TIMESTAMP DEFAULT NOW()"
+            ))
+            conn.commit()
+            print("[OK] Migration: added 'updated_at' column to bookings")
+        else:
+            print("[OK] Migration: 'updated_at' column already exists")
 
     # Seed tables data if empty
     db = SessionLocal()

@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session
 from datetime import date, time
 from models.models import User, Table, Booking
-from schemas.schemas import BookingCreate
+from schemas.schemas import BookingCreate, BookingUpdate
 from fastapi import HTTPException
+from uuid import UUID
 
 class BookingService:
     @staticmethod
@@ -121,3 +122,143 @@ class BookingService:
         if not booking:
             raise HTTPException(status_code=404, detail="Booking not found")
         return booking
+
+    # ─────────────────────────────────────────────────────────────────
+    # Week 2 — New Service Methods
+    # ─────────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def update_booking(db: Session, booking_id: UUID, update_data: BookingUpdate):
+        """Update an existing booking with conflict and validation checks."""
+        # 1. Fetch booking
+        booking = db.query(Booking).filter(Booking.id == booking_id).first()
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found")
+
+        if booking.status == "cancelled":
+            raise HTTPException(status_code=400, detail="Cannot update a cancelled booking")
+
+        # 2. Determine final values (use new if provided, else keep existing)
+        new_date = update_data.booking_date or booking.booking_date
+        new_time = update_data.booking_time or booking.booking_time
+        new_guest_count = update_data.guest_count or booking.guest_count
+        new_table_id = update_data.table_id or booking.table_id
+
+        # 3. Validate: no past dates
+        if new_date < date.today():
+            raise HTTPException(status_code=400, detail="Cannot book in the past")
+
+        # 4. Validate: table must exist and match seat count rule
+        target_table = db.query(Table).filter(Table.id == new_table_id).first()
+        if not target_table:
+            raise HTTPException(status_code=404, detail="Table not found")
+        if not target_table.is_active:
+            raise HTTPException(status_code=400, detail="Table is not active")
+        if target_table.capacity < new_guest_count:
+            raise HTTPException(status_code=400, detail="Table capacity is less than guest count")
+
+        # 5. Conflict check — exclude current booking from conflict search
+        conflicting = db.query(Booking).filter(
+            Booking.booking_date == new_date,
+            Booking.booking_time == new_time,
+            Booking.table_id == new_table_id,
+            Booking.status == "confirmed",
+            Booking.id != booking_id
+        ).first()
+
+        if conflicting:
+            raise HTTPException(status_code=400, detail="Already Occupied")
+
+        # 6. Apply updates
+        booking.booking_date = new_date
+        booking.booking_time = new_time
+        booking.guest_count = new_guest_count
+        booking.table_id = new_table_id
+
+        try:
+            db.commit()
+            db.refresh(booking)
+            return {
+                "booking_id": booking.id,
+                "table_name": target_table.table_name,
+                "guest_count": booking.guest_count,
+                "message": "Booking Updated"
+            }
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail="Failed to update booking")
+
+    @staticmethod
+    def cancel_booking(db: Session, booking_id: UUID):
+        """Soft-cancel a booking — sets status to 'cancelled', table becomes available."""
+        booking = db.query(Booking).filter(Booking.id == booking_id).first()
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found")
+
+        if booking.status == "cancelled":
+            raise HTTPException(status_code=400, detail="Booking is already cancelled")
+
+        booking.status = "cancelled"
+        try:
+            db.commit()
+            db.refresh(booking)
+            return {"message": "Booking Cancelled"}
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail="Failed to cancel booking")
+
+    @staticmethod
+    def get_user_bookings(db: Session, user_id: UUID):
+        """Return all bookings for a user, newest first, with table_name."""
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        bookings = (
+            db.query(Booking)
+            .filter(Booking.user_id == user_id)
+            .order_by(Booking.created_at.desc())
+            .all()
+        )
+
+        result = []
+        for b in bookings:
+            table = db.query(Table).filter(Table.id == b.table_id).first()
+            result.append({
+                "booking_id": b.id,
+                "table_name": table.table_name if table else "Unknown",
+                "booking_date": b.booking_date,
+                "booking_time": b.booking_time,
+                "guest_count": b.guest_count,
+                "booking_status": b.status,
+            })
+
+        return result
+
+    @staticmethod
+    def get_all_bookings_admin(db: Session, filter_date: date = None, filter_status: str = None):
+        """Admin view: all bookings with optional date/status filters, sorted newest first."""
+        query = db.query(Booking).order_by(Booking.created_at.desc())
+
+        if filter_date:
+            query = query.filter(Booking.booking_date == filter_date)
+        if filter_status:
+            query = query.filter(Booking.status == filter_status)
+
+        bookings = query.all()
+
+        result = []
+        for b in bookings:
+            user = db.query(User).filter(User.id == b.user_id).first()
+            table = db.query(Table).filter(Table.id == b.table_id).first()
+            result.append({
+                "booking_id": b.id,
+                "customer_name": user.name if user else "Unknown",
+                "table_name": table.table_name if table else "Unknown",
+                "booking_date": b.booking_date,
+                "booking_time": b.booking_time,
+                "status": b.status,
+            })
+
+        return result
+

@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, Integer, Boolean, Date, Time, DateTime, ForeignKey, String
+from sqlalchemy import Column, Integer, Boolean, Date, Time, DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -43,6 +43,22 @@ class Booking(Base):
     guest_count = Column(Integer, nullable=False)
     status = Column(String, default="confirmed")
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="bookings")
     table = relationship("Table", back_populates="bookings")
+
+
+class Waitlist(Base):
+    __tablename__ = "waitlist"
+    __table_args__ = (
+        UniqueConstraint("email", "booking_date", "booking_time", name="uq_waitlist_email_date_time"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, nullable=False)
+    guest_count = Column(Integer, nullable=False)
+    booking_date = Column(Date, nullable=False)
+    booking_time = Column(Time, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
